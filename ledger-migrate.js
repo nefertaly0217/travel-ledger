@@ -6,7 +6,7 @@ const NEW="https://nefertaly0217.github.io";
 const isOld=location.origin===OLD;
 const $=id=>document.getElementById(id);
 let sourceWindow=null,pending=null,baseline=null;
-const nonce=crypto.randomUUID();
+const nonce=globalThis.crypto?.randomUUID?.() || Array.from(globalThis.crypto.getRandomValues(new Uint32Array(4)),n=>n.toString(16)).join("-");
 function say(text){$("status").textContent=text;}
 function read(){const raw=localStorage.getItem(KEY);return {raw,data:raw?JSON.parse(raw):{version:1,settings:null,travelers:[],bills:[]}};}
 function validate(data){
@@ -32,7 +32,7 @@ function merge(target,source){
  const next=JSON.parse(JSON.stringify(target)),members=new Map(next.travelers.map(t=>[t.id,t]));
  for(const t of source.travelers){
   const existing=members.get(t.id);
-  if(existing&&existing.name!==t.name)throw Error("同一成员编号对应不同姓名，已停止迁移，未覆盖任何账单。");
+  if(existing&&existing.name!==t.name)throw Error("成员编号冲突："+existing.name+" / "+t.name+"。请把此提示发给我，暂未修改账单。");
   if(!existing){next.travelers.push(t);members.set(t.id,t);}
  }
  const bills=new Map(next.bills.map(b=>[b.id,b]));
@@ -50,7 +50,12 @@ function merge(target,source){
 function totals(data){const sums={};for(const b of data.bills){sums[b.currency]=(sums[b.currency]||0)+b.originalAmountCents;if(!Number.isSafeInteger(sums[b.currency]))throw Error("合计金额过大。");}return Object.entries(sums).map(([c,n])=>c+" "+(n/100).toFixed(2)).join(" · ")||"无账单";}
 function download(data){
  const blob=new Blob([JSON.stringify({format:"travel-ledger-backup",data},null,2)],{type:"application/json"});
- const a=document.createElement("a"),url=URL.createObjectURL(blob);a.href=url;a.download="travel-ledger-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+ const a=document.createElement("a"),url=URL.createObjectURL(blob);a.href=url;a.download="travel-ledger-backup-"+new Date().toISOString().slice(0,10)+".json";document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+function parseBackup(text){
+ let payload;
+ try{payload=JSON.parse(text.replace(/^\uFEFF/,"").trim());}catch(e){throw Error("无法解析 JSON。请粘贴完整备份内容，或选择下载的 .json 文件。");}
+ return payload?.format==="travel-ledger-backup"?payload.data:payload;
 }
 function preview(data){
  pending=null;$("import").hidden=true;
@@ -76,6 +81,18 @@ if(isOld){
   else{download(data);say("已导出备份。请打开新账本迁移页，选择这个 JSON 文件。");}
  });
  $("download").onclick=guarded(()=>download(validate(read().data)));
+ $("show-text").onclick=guarded(()=>{
+  const snapshot=validate(read().data);
+  if(!snapshot.bills.length)throw Error("当前浏览器没有找到旧账单。请先确认同一浏览器打开旧账本能看到记录。");
+  $("transfer-text").value=JSON.stringify({format:"travel-ledger-backup",data:snapshot});
+  $("text-area").hidden=false;$("transfer-text").focus();$("transfer-text").select();
+  say("已生成 "+snapshot.bills.length+" 笔账单的备份文本。复制下方全部文字，再点击“前往新账本粘贴”。");
+ });
+ $("copy-text").onclick=async()=>{
+  $("transfer-text").focus();$("transfer-text").select();
+  try{await navigator.clipboard.writeText($("transfer-text").value);say("已复制。点击“前往新账本粘贴”。");}
+  catch(e){say("浏览器未允许自动复制。文字已选中，请手动复制（手机长按选择全部，电脑按 Ctrl/Cmd+C）。");}
+ };
 }else if(location.origin===NEW){
  $("target").hidden=false;
  $("home").href="./#ledger";
@@ -89,9 +106,10 @@ if(isOld){
  }));
  $("file").onchange=async event=>{
   pending=null;$("import").hidden=true;
-  try{const file=event.target.files[0];if(!file)return;if(file.size>10000000)throw Error("备份文件过大。");const payload=JSON.parse(await file.text());preview(payload.format==="travel-ledger-backup"?payload.data:payload);}
+  try{const file=event.target.files[0];if(!file)return;if(file.size>10000000)throw Error("备份文件过大。");const text=typeof file.text==="function"?await file.text():await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(Error("读取文件失败，请使用粘贴备份文本。"));reader.readAsText(file);});preview(parseBackup(text));event.target.value="";}
   catch(e){say(e.message||"无法读取文件。");}
  };
+ $("read-text").onclick=guarded(()=>preview(parseBackup($("paste-text").value)));
  $("import").onclick=guarded(()=>{
   if(!pending)return;
   if(localStorage.getItem(KEY)!==baseline)throw Error("新账本刚刚发生变化，请重新读取旧账单后迁移。");

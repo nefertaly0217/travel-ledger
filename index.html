@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="./ledger.css?v=20260922">
   <script src="./runtime-storage.js?v=20260922" defer></script>
   <script src="./ledger.js?v=cloud1" defer></script>
-  <script src="./ledger-cloud.js?v=share2" defer></script>
+  <script src="./ledger-cloud.js?v=supabase1" defer></script>
 </head>
 <body data-active-view="ledger">
   <main class="ledger-view" id="ledger-view">
@@ -26,7 +26,7 @@
 <section id="sync-panel">
 <strong>云端共享账本</strong><p id="sync-status" role="status">正在加载…</p>
 <div id="sync-local"><button id="sync-create" type="button">启用云端同步并生成专属链接</button><p>已有账单会一并上传。若其他设备已经启用，请直接打开那台设备分享的专属链接。</p></div>
-<div id="sync-connected" hidden><button id="sync-copy" type="button">复制专属链接 · 发到手机</button><button id="sync-reload" type="button">读取云端最新</button><input id="sync-link" hidden readonly aria-label="专属账本链接"><p>所有设备打开同一个专属链接，即可直接查看、编辑同一份账单。持有链接的人拥有读写权限，请私下分享。</p><small>保存成功后显示“已同步到云端”。空闲页面约每 8 秒读取更新，正在填写时保留当前输入。</small><details><summary>本设备管理</summary><button id="sync-disconnect" type="button">断开并查看原本地账本</button></details></div>
+<div id="sync-connected" hidden><button id="sync-copy" type="button">复制专属链接 · 发到手机</button><button id="sync-reload" type="button">读取云端最新</button><input id="sync-link" hidden readonly aria-label="专属账本链接"><p>所有设备打开同一个专属链接，即可直接查看、编辑同一份云端账单。持有链接的人拥有读写权限，请私下分享。</p><small>保存成功后显示“已同步到云端”。空闲页面约每 8 秒自动读取其他设备的新修改，正在填写时不会打断。</small><details><summary>本设备管理</summary><button id="sync-disconnect" type="button">断开并查看原本地账本</button></details></div>
 </section>
     <p style="padding:12px 20px;margin:0"><a href="./ledger-migrate.html" style="color:#315d49">迁移旧账本的账单 →</a></p>
     <div

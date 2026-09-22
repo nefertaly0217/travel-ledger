@@ -1,0 +1,17 @@
+const fs=require("node:fs"),vm=require("node:vm"),assert=require("node:assert/strict");
+const script=fs.readFileSync(__dirname+"/ledger-migrate.js","utf8");
+const key="travel-plan:runtime:v1:italy-2026-10",map=new Map(),els={},events={};
+const ctx=vm.createContext({location:{origin:"https://nefertaly0217.github.io"},crypto:{randomUUID:()=>"token"},document:{getElementById:id=>els[id]??=( {hidden:false})},localStorage:{getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v)},window:{addEventListener:(n,f)=>events[n]=f,open:()=>({})},URL,URLSearchParams,Blob,setTimeout});
+vm.runInContext(script,ctx);
+const source={version:1,settings:{baseCurrency:"CNY"},travelers:[{id:"p1",name:"甲"}],bills:[{id:"b1",currency:"EUR",originalAmountCents:1250,payerId:"p1",participantIds:["p1"],note:"午餐"}]};
+ctx.source=source;ctx.empty={version:1,settings:null,travelers:[],bills:[],todos:[{id:"keep"}]};
+let out=vm.runInContext("merge(empty,source)",ctx);assert.equal(out.added,1);assert.equal(out.data.bills[0].originalAmountCents,1250);assert.equal(out.data.todos[0].id,"keep");
+ctx.target=out.data;out=vm.runInContext("merge(target,source)",ctx);assert.equal(out.added,0);assert.equal(out.skipped,1);
+ctx.conflict=structuredClone(source);ctx.conflict.bills[0].originalAmountCents=2500;
+assert.throws(()=>vm.runInContext("merge(target,conflict)",ctx),/同一编号/);
+ctx.invalid=structuredClone(source);ctx.invalid.bills[0].participantIds=["missing"];
+assert.throws(()=>vm.runInContext("merge(empty,invalid)",ctx),/不完整/);
+map.set(key,JSON.stringify(ctx.empty));vm.runInContext("preview(source)",ctx);els.import.onclick();assert.equal(JSON.parse(map.get(key)).bills.length,1);assert.ok([...map.keys()].some(k=>k.includes("migration-backup:")));
+vm.runInContext("preview(source)",ctx);map.set(key,JSON.stringify({...ctx.empty,updatedAt:"changed"}));els.import.onclick();assert.match(els.status.textContent,/发生变化/);assert.equal(JSON.parse(map.get(key)).bills.length,0);
+events.message({origin:"https://evil.invalid",source:null,data:{type:"travel-ledger-migration",token:"token",data:source}});assert.equal(JSON.parse(map.get(key)).bills.length,0);
+console.log("PASS: merge, deduplication, conflicts, references, backup, concurrent edits, origin guard");

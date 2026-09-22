@@ -7,20 +7,26 @@
   <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="referrer" content="no-referrer">
   <title>旅行记账</title>
   <link rel="stylesheet" href="./styles.css?v=20260922">
   <link rel="stylesheet" href="./ledger.css?v=20260922">
   <script src="./runtime-storage.js?v=20260922" defer></script>
   <script src="./ledger.js?v=cloud1" defer></script>
-  <script src="./ledger-cloud.js?v=cloud1" defer></script>
+  <script src="./ledger-cloud.js?v=share2" defer></script>
 </head>
 <body data-active-view="ledger">
   <main class="ledger-view" id="ledger-view">
-<section id="sync-panel" style="margin:12px 20px;padding:16px;border:1px solid #d8e0d8;border-radius:14px;background:#f3f7f1">
-<strong>多设备共享账本</strong><p id="sync-status" role="status">正在加载…</p>
-<div id="sync-local"><button id="sync-create" type="button">电脑：上传已有账单并创建共享账本</button>
-<p><label for="sync-input">手机：粘贴电脑上的连接码</label><br><input id="sync-input" type="password" autocomplete="off" placeholder="64 位共享连接码" style="width:min(100%,400px)"><button id="sync-connect" type="button">连接共享账本</button></p></div>
-<div id="sync-connected" hidden><button id="sync-reload" type="button">读取云端最新</button><details><summary>连接其他设备 / 管理连接</summary><p>持有连接码的人可以查看和修改账单，请私下传递并妥善保存。</p><input id="sync-code" readonly type="password" aria-label="共享连接码" style="width:min(100%,400px)"><button id="sync-copy" type="button">复制连接码</button><button id="sync-disconnect" type="button">断开本设备连接</button></details><small>保存成功后会显示“已同步到云端”。页面空闲时约每 8 秒读取其他设备的修改；正在填写时保留当前输入。</small></div>
+<style>
+#sync-panel{margin:12px 20px;padding:16px;border:1px solid #d8e0d8;border-radius:14px;background:#f3f7f1}
+#sync-panel button{min-height:44px;padding:10px 14px;margin:4px;border:1px solid #315d49;border-radius:10px;background:#315d49;color:white;font:inherit;cursor:pointer;touch-action:manipulation}
+#sync-panel button:disabled{opacity:.55}
+#sync-link{box-sizing:border-box;width:100%;padding:12px;font:inherit}
+</style>
+<section id="sync-panel">
+<strong>云端共享账本</strong><p id="sync-status" role="status">正在加载…</p>
+<div id="sync-local"><button id="sync-create" type="button">启用云端同步并生成专属链接</button><p>已有账单会一并上传。若其他设备已经启用，请直接打开那台设备分享的专属链接。</p></div>
+<div id="sync-connected" hidden><button id="sync-copy" type="button">复制专属链接 · 发到手机</button><button id="sync-reload" type="button">读取云端最新</button><input id="sync-link" hidden readonly aria-label="专属账本链接"><p>所有设备打开同一个专属链接，即可直接查看、编辑同一份账单。持有链接的人拥有读写权限，请私下分享。</p><small>保存成功后显示“已同步到云端”。空闲页面约每 8 秒读取更新，正在填写时保留当前输入。</small><details><summary>本设备管理</summary><button id="sync-disconnect" type="button">断开并查看原本地账本</button></details></div>
 </section>
     <p style="padding:12px 20px;margin:0"><a href="./ledger-migrate.html" style="color:#315d49">迁移旧账本的账单 →</a></p>
     <div

@@ -1400,7 +1400,7 @@
         return true;
       } catch (error) {
         console.error("TravelLedger could not save data", error);
-        setNotice(ledgerPersistenceMode === "d1"
+        setNotice(ledgerPersistenceMode === "cloud" ? (error.message || "云端保存失败，请重试。") : ledgerPersistenceMode === "d1"
           ? "保存失败，请检查网络或你的云端数据库配置后重试。"
           : "本地保存失败，请检查浏览器存储空间或隐私设置后重试。");
         return false;
@@ -2063,7 +2063,24 @@
     return deepClone(ledgerData);
   }
 
+  async function refreshShared(options = {}) {
+    return enqueueMutation(async () => {
+      if (editingBillId || editingNoteBillId || editingMemberId || openDialogName) return false;
+      const next = await ledgerAdapter.load({ tripId: ledgerTripId });
+      if (options.canApply && !options.canApply()) return false;
+      if (editingBillId || editingNoteBillId || editingMemberId || openDialogName) return false;
+      if (ledgerAdapter.acceptLoad) ledgerAdapter.acceptLoad();
+      if (JSON.stringify(normalizeData(next)) !== JSON.stringify(ledgerData)) {
+        captureBillDraft();
+        ledgerData = normalizeData(next);
+        renderApp();
+      }
+      return true;
+    });
+  }
+
   const publicApi = {
+    refreshShared,
     init,
     setActiveTab,
     createLocalStorageAdapter,

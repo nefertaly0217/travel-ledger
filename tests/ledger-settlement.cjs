@@ -1,0 +1,10 @@
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync(require('node:path').join(__dirname, '../ledger.js'),'utf8').replace('  const publicApi = {','  globalThis.testApi = {normalizeData, calculateStats, settlementReady, settlementCents, renderStatsPage, set(d,r){ledgerData=normalizeData(d); exchange={loading:false,error:"",rates:r};}};\n  const publicApi = {');
+const ctx={console,Intl,Date,Map,Set,URL,crypto:require('crypto').webcrypto};vm.createContext(ctx);vm.runInContext(source,ctx);const a=ctx.testApi;
+const travelers=['a','b','c'].map(id=>({id,name:id,color:'#123456'}));const bill=(id,currency,amount,payer,people)=>({id,currency,originalAmountCents:amount,payerId:payer,participantIds:people});
+const data={travelers,bills:[bill('e','EUR',10000,'a',['a','b','c']),bill('r','CNY',9000,'b',['a','b','c'])]};
+a.set(data,{});assert.equal(a.settlementReady(),false);assert.match(a.renderStatsPage(),/取得汇率后/);
+a.set(data,{EUR:{rate:8,date:'2026-09-21'}});let stats=a.calculateStats();assert.equal(stats.totalCents,89000);assert.equal(stats.members.reduce((s,m)=>s+m.netCents,0),0);assert.equal(stats.members.reduce((s,m)=>s+m.owedCents,0),89000);assert.equal(stats.transfers.reduce((s,t)=>s+t.amountCents,0),50333);a.set({...data,settings:{baseCurrency:'CNY',commonCurrencies:['EUR'],lastCurrency:'EUR',manualRates:{EUR:7.5}}},{EUR:{rate:8,date:'2026-09-21'}});assert.equal(a.calculateStats().totalCents,84000);
+a.set({...data,bills:[{...data.bills[0],baseAmountCents:70000}]},{EUR:{rate:8,date:'2026-09-21'}});assert.equal(a.calculateStats().totalCents,80000);assert.equal(a.normalizeData(data).bills.length,2);
+a.set({travelers,bills:[bill('tiny','EUR',1,'a',['a','b','c'])]},{EUR:{rate:7.693,date:'2026-09-21'}});assert.equal(a.calculateStats().totalCents,8);assert.equal(a.calculateStats().members.reduce((s,m)=>s+m.owedCents,0),8);
+console.log('PASS: original currency retention, live/manual FX settlement, no-rate guard, cent remainder and balanced settlement');
